@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>OneCheck Login</title>
+
+  <style>
+    *{
+      margin:0;
+      padding:0;
+      box-sizing:border-box;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    body{
+      width:100%;
+      height:100vh;
+      display:flex;
+      background:#f3f3f3;
+    }
+
+    .container{
+      width:100%;
+      display:flex;
+    }
+
+    /* LADO ESQUERDO */
+    .left{
+      width:50%;
+      background:url('https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?q=80&w=1200&auto=format&fit=crop') center/cover no-repeat;
+      position:relative;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    .overlay{
+      background:rgba(0,0,0,0.35);
+      backdrop-filter: blur(4px);
+      padding:35px;
+      border-radius:12px;
+      width:380px;
+      color:white;
+    }
+
+    .logo{
+      font-size:52px;
+      font-weight:bold;
+      margin-bottom:15px;
+    }
+
+    .logo span{
+      color:#4caf50;
+    }
+
+    .subtitle{
+      font-size:20px;
+      line-height:1.4;
+      margin-bottom:25px;
+    }
+
+    .features{
+      list-style:none;
+    }
+
+    .features li{
+      margin-bottom:12px;
+      font-size:18px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+
+    /* LADO DIREITO */
+    .right{
+      width:50%;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      background:#f5f5f5;
+    }
+
+    .login-box{
+      width:420px;
+      background:white;
+      padding:40px;
+      border-radius:10px;
+      box-shadow:0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .login-box h1{
+      font-size:36px;
+      margin-bottom:10px;
+      color:#333;
+    }
+
+    .login-box p{
+      color:#666;
+      margin-bottom:30px;
+    }
+
+    .input-group{
+      margin-bottom:20px;
+    }
+
+    .input-group label{
+      display:block;
+      margin-bottom:8px;
+      color:#333;
+      font-weight:600;
+    }
+
+    .input-group input{
+      width:100%;
+      padding:14px;
+      border:1px solid #dcdcdc;
+      border-radius:8px;
+      outline:none;
+      font-size:15px;
+      transition:0.3s;
+    }
+
+    .input-group input:focus{
+      border-color:#2563eb;
+      box-shadow:0 0 0 3px rgba(37,99,235,0.15);
+    }
+
+    .forgot{
+      text-align:right;
+      margin-bottom:20px;
+    }
+
+    .forgot a{
+      text-decoration:none;
+      color:#2563eb;
+      font-size:14px;
+    }
+
+    .btn{
+      width:100%;
+      padding:15px;
+      border:none;
+      border-radius:8px;
+      background:#2563eb;
+      color:white;
+      font-size:16px;
+      cursor:pointer;
+      transition:0.3s;
+      font-weight:bold;
+    }
+
+    .btn:hover{
+      background:#1d4ed8;
+    }
+
+    .register{
+      text-align:center;
+      margin-top:20px;
+      color:#666;
+      font-size:14px;
+    }
+
+    .register a{
+      text-decoration:none;
+      color:#2563eb;
+      font-weight:bold;
+    }
+
+    /* RESPONSIVO */
+    @media(max-width: 900px){
+      .container{
+        flex-direction:column;
+      }
+
+      .left,
+      .right{
+        width:100%;
+        height:50vh;
+      }
+
+      .login-box{
+        width:90%;
+      }
+
+      .overlay{
+        width:90%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+
+    <!-- ESQUERDA -->
+    <div class="left">
+      <div class="overlay">
+
+        <div class="logo">
+          <span>✓</span>neCheck
+        </div>
+
+        <div class="subtitle">
+          Sua plataforma definitiva de gestão e vistoria imobiliária.
+        </div>
+
+        <ul class="features">
+          <li>✔ Checklists Ágeis</li>
+          <li>✔ Relatórios Comparativos</li>
+          <li>✔ Segurança Jurídica</li>
+        </ul>
+
+      </div>
+    </div>
+
+    <!-- DIREITA -->
+    <div class="right">
+      <div class="login-box">
+
+        <h1>Acesse sua conta</h1>
+        <p>Gestão e vistorias inteligentes num só lugar.</p>
+
+        <form id="loginForm">
+
+          <div class="input-group">
+            <label>E-mail Corporativo</label>
+            <input 
+              type="email" 
+              placeholder="seu.email@empresa.com.br"
+              required
+            />
+          </div>
+
+          <div class="input-group">
+            <label>Senha</label>
+            <input 
+              type="password" 
+              placeholder="********"
+              required
+            />
+          </div>
+
+          <div class="forgot">
+            <a href="#">Esqueceu sua senha?</a>
+          </div>
+
+          <button type="submit" class="btn">
+            Entrar
+          </button>
+
+        </form>
+
+        <div class="register">
+          Não tem uma conta?
+          <a href="index.html">Solicite uma demonstração</a>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const form = document.getElementById('loginForm');
+
+    form.addEventListener('submit', function(e){
+      e.preventDefault();
+
+      alert('Login enviado com sucesso!');
+    });
+  </script>
+
+</body>
+</html>

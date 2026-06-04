@@ -1,0 +1,117 @@
+<?php
+/**
+ * OneCheck — Configuração da API
+ * Toda comunicação com o backend passa por este arquivo.
+ */
+
+define('API_BASE_URL', 'http://3.145.6.22:8000/api/v1');
+define('API_TIMEOUT',  10);
+
+// ============================================================
+// Cliente HTTP central
+// ============================================================
+class ApiClient
+{
+    private static function token(): ?string
+    {
+        return $_SESSION['api_token'] ?? null;
+    }
+
+    public static function get(string $path, array $query = []): array
+    {
+        $url = API_BASE_URL . $path;
+        if ($query) $url .= '?' . http_build_query($query);
+        return self::request('GET', $url);
+    }
+
+    public static function post(string $path, array $body = []): array
+    {
+        return self::request('POST', API_BASE_URL . $path, $body);
+    }
+
+    public static function put(string $path, array $body = []): array
+    {
+        return self::request('PUT', API_BASE_URL . $path, $body);
+    }
+
+    public static function patch(string $path, array $body = []): array
+    {
+        return self::request('PATCH', API_BASE_URL . $path, $body);
+    }
+
+    public static function delete(string $path): array
+    {
+        return self::request('DELETE', API_BASE_URL . $path);
+    }
+
+    private static function request(string $method, string $url, ?array $body = null, bool $attemptRefresh = true): array
+    {
+        $response = self::doRequest($method, $url, $body, true);
+
+        if ($response['_status'] === 401 && $attemptRefresh && self::tryRefreshToken()) {
+            $response = self::doRequest($method, $url, $body, true);
+        }
+
+        return $response;
+    }
+
+    private static function doRequest(string $method, string $url, ?array $body = null, bool $withAuth = true): array
+    {
+        $headers = [
+            'Content-Type: application/json',
+            'Accept: application/json',
+        ];
+
+        if ($withAuth) {
+            $token = self::token();
+            if ($token) {
+                $headers[] = 'Authorization: Bearer ' . $token;
+            }
+        }
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => API_TIMEOUT,
+            CURLOPT_HTTPHEADER     => $headers,
+            CURLOPT_CUSTOMREQUEST  => $method,
+            CURLOPT_SSL_VERIFYPEER => false,
+        ]);
+
+        if ($body !== null) {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));
+        }
+
+        $raw  = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $err  = curl_error($ch);
+        curl_close($ch);
+
+        if ($err || !$raw) {
+            return ['sucesso' => false, 'erro' => 'API indisponível: ' . $err, '_status' => 0];
+        }
+
+        $data = json_decode($raw, true) ?? ['sucesso' => false, 'erro' => 'Resposta inválida'];
+        $data['_status'] = $code;
+        return $data;
+    }
+
+    private static function tryRefreshToken(): bool
+    {
+        $refreshToken = $_SESSION['api_refresh_token'] ?? null;
+        if (!$refreshToken) {
+            return false;
+        }
+
+        $refreshResponse = self::doRequest('POST', API_BASE_URL . '/auth/refresh', ['refresh_token' => $refreshToken], false);
+        if (!empty($refreshResponse['sucesso']) && !empty($refreshResponse['dados']['access_token'])) {
+            $_SESSION['api_token'] = $refreshResponse['dados']['access_token'];
+            if (!empty($refreshResponse['dados']['refresh_token'])) {
+                $_SESSION['api_refresh_token'] = $refreshResponse['dados']['refresh_token'];
+            }
+            return true;
+        }
+
+        return false;
+    }
+}

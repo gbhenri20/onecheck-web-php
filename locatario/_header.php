@@ -1,6 +1,6 @@
 <?php
 /** @var string $pageTitle */
-$user = Auth::user();
+$user = api_user();
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -13,14 +13,16 @@ $user = Auth::user();
     <link href="<?= e(asset_url('css/style.css')) ?>" rel="stylesheet">
 </head>
 <body class="app-body">
-<nav class="navbar navbar-dark bg-primary">
+<nav class="navbar app-navbar">
     <div class="container">
-        <span class="navbar-brand mb-0 h1">OneCheck · Locatário</span>
-        <div class="d-flex gap-2">
-            <a class="btn btn-sm btn-outline-light" href="<?= e(base_url('usuarios/perfil.php')) ?>"><?= e($user['nome']) ?></a>
+        <span class="navbar-brand mb-0">
+            <span class="brand-one">One</span><span class="brand-check">Check</span>
+            <span class="text-muted small ms-2">Locatário</span>
+        </span>
+        <div class="d-flex gap-2 align-items-center">
+            <span class="text-muted small d-none d-sm-inline"><?= e($user['nome'] ?? '') ?></span>
             <a class="btn btn-sm btn-outline-light" href="<?= e(base_url('public/logout.php')) ?>">Sair</a>
         </div>
     </div>
 </nav>
 <main class="container py-4">
-<?php flash_render(); ?>

@@ -13,8 +13,12 @@ $imovel = $res['dados'] ?? null;
 if (!$imovel) redirect(base_url('imoveis/index.php'));
 
 $erro = '';
-$endRaw = $imovel['endereco'] ?? [];
-$end = is_array($endRaw) ? $endRaw : ['rua' => $endRaw];
+$resEnd = ApiClient::get('/imoveis/' . $id . '/endereco');
+$end = !empty($resEnd['sucesso']) ? ($resEnd['dados'] ?? []) : [];
+if (!$end) {
+    $endRaw = $imovel['endereco'] ?? [];
+    $end = is_array($endRaw) ? $endRaw : ['rua' => $endRaw];
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $codigo      = trim($_POST['codigo'] ?? '');
@@ -42,20 +46,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $resUpd = ApiClient::put('/imoveis/' . $id, $payload);
         if (!empty($resUpd['sucesso'])) {
-            $rua    = trim($_POST['rua']    ?? '');
-            $cidade = trim($_POST['cidade'] ?? '');
-            $estado = strtoupper(trim($_POST['estado'] ?? ''));
-            $cep    = preg_replace('/\D/', '', $_POST['cep'] ?? '');
-            if ($rua && $cidade && strlen($estado) === 2) {
-                ApiClient::post('/imoveis/' . $id . '/endereco', [
-                    'rua'         => $rua,
-                    'numero'      => trim($_POST['numero'] ?? ''),
-                    'complemento' => trim($_POST['complemento'] ?? ''),
-                    'bairro'      => trim($_POST['bairro'] ?? ''),
-                    'cidade'      => $cidade,
-                    'estado'      => $estado,
-                    'cep'         => $cep,
-                ]);
+            $endPayload = endereco_payload_from_post();
+            if ($endPayload !== null) {
+                ApiClient::post('/imoveis/' . $id . '/endereco', $endPayload);
             }
             redirect(base_url('imoveis/index.php'));
         } else {

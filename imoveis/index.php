@@ -3,7 +3,10 @@ declare(strict_types=1);
 require_once dirname(__DIR__) . '/includes/bootstrap.php';
 require_once dirname(__DIR__) . '/config/api.php';
 require_once dirname(__DIR__) . '/includes/auth_api.php';
-api_require_login();
+require_once dirname(__DIR__) . '/includes/rbac.php';
+api_require_page('imoveis');
+
+flash_render();
 
 $statusF = $_GET['status'] ?? '';
 $busca   = trim($_GET['q'] ?? '');
@@ -27,7 +30,12 @@ require ONECHECK_ROOT . '/includes/header.php';
         <h2>Imóveis</h2>
         <p><?= $total ?> imóvel(is) cadastrado(s)</p>
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 flex-wrap">
+        <?php if (api_can_create('imoveis')): ?>
+        <a href="<?= e(base_url('imoveis/novo.php')) ?>" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg me-1"></i>Novo imóvel
+        </a>
+        <?php endif; ?>
         <a href="<?= e(base_url('imoveis/mapa.php')) ?>" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-map me-1"></i>Mapa
         </a>
@@ -58,8 +66,14 @@ require ONECHECK_ROOT . '/includes/header.php';
 <div class="card">
     <div class="card-body p-0">
         <?php if (!$imoveis): ?>
-        <div class="p-4" style="color:#6b7fa3;font-size:13px">
-            <i class="bi bi-building me-2"></i>Nenhum imóvel cadastrado na API ainda.
+        <div class="p-5 text-center">
+            <i class="bi bi-building" style="font-size:48px;color:var(--oc-border)"></i>
+            <p class="mt-3 mb-1" style="color:var(--oc-muted)">Nenhum imóvel cadastrado ainda.</p>
+            <?php if (api_can_create('imoveis')): ?>
+            <a href="<?= e(base_url('imoveis/novo.php')) ?>" class="btn btn-primary btn-sm mt-2">
+                <i class="bi bi-plus-lg me-1"></i>Criar imóvel
+            </a>
+            <?php endif; ?>
         </div>
         <?php else: ?>
         <table class="table table-hover mb-0">

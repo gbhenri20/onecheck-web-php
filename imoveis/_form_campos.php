@@ -157,6 +157,33 @@ if (!$tamanhoNum && !empty($imovel['tamanho'])) {
     </div>
 </div>
 
+<h6 class="mb-3 mt-4" style="color:#6b7fa3;font-size:11px;text-transform:uppercase;letter-spacing:.06em">Localização no mapa</h6>
+<div class="row g-3">
+    <div class="col-md-3">
+        <label class="form-label">Latitude</label>
+        <?php
+        $latVal = $_POST['latitude'] ?? ($end['latitude'] ?? '');
+        $lngVal = $_POST['longitude'] ?? ($end['longitude'] ?? '');
+        ?>
+        <input type="text" name="latitude" id="campo-latitude" class="form-control" inputmode="decimal"
+               placeholder="-23.550520" value="<?= e((string) $latVal) ?>">
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Longitude</label>
+        <input type="text" name="longitude" id="campo-longitude" class="form-control" inputmode="decimal"
+               placeholder="-46.633308" value="<?= e((string) $lngVal) ?>">
+    </div>
+    <div class="col-md-6 d-flex align-items-end gap-2 flex-wrap">
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-minha-localizacao">
+            <i class="bi bi-geo-alt me-1"></i>Usar minha localização
+        </button>
+        <span class="form-text mb-0">Clique no mapa abaixo para definir o ponto.</span>
+    </div>
+    <div class="col-12">
+        <div id="mapa-picker" style="height:240px;border-radius:8px;border:1px solid var(--oc-border,#dee2e6)"></div>
+    </div>
+</div>
+
 <!-- Seção: Observações -->
 <div class="row g-3 mt-3">
     <div class="col-12">
@@ -202,6 +229,80 @@ document.addEventListener('DOMContentLoaded', function() {
                     btnCep.innerHTML = 'Buscar';
                 });
         });
+    }
+
+    const mapEl = document.getElementById('mapa-picker');
+    const latInput = document.getElementById('campo-latitude');
+    const lngInput = document.getElementById('campo-longitude');
+    if (mapEl && latInput && lngInput && typeof L !== 'undefined') {
+        const parseCoord = (v) => {
+            const n = parseFloat(String(v).replace(',', '.'));
+            return Number.isFinite(n) ? n : null;
+        };
+        let lat = parseCoord(latInput.value) ?? -23.5505;
+        let lng = parseCoord(lngInput.value) ?? -46.6333;
+        const map = L.map('mapa-picker').setView([lat, lng], latInput.value ? 15 : 11);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap'
+        }).addTo(map);
+
+        let marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+
+        const setCoords = (newLat, newLng) => {
+            latInput.value = newLat.toFixed(6);
+            lngInput.value = newLng.toFixed(6);
+            if (marker) {
+                marker.setLatLng([newLat, newLng]);
+            } else {
+                marker = L.marker([newLat, newLng], { draggable: true }).addTo(map);
+                marker.on('dragend', () => {
+                    const p = marker.getLatLng();
+                    setCoords(p.lat, p.lng);
+                });
+            }
+        };
+
+        marker.on('dragend', () => {
+            const p = marker.getLatLng();
+            setCoords(p.lat, p.lng);
+        });
+
+        map.on('click', (e) => setCoords(e.latlng.lat, e.latlng.lng));
+
+        const syncFromInputs = () => {
+            const la = parseCoord(latInput.value);
+            const lo = parseCoord(lngInput.value);
+            if (la !== null && lo !== null) {
+                marker.setLatLng([la, lo]);
+                map.panTo([la, lo]);
+            }
+        };
+        latInput.addEventListener('change', syncFromInputs);
+        lngInput.addEventListener('change', syncFromInputs);
+
+        const btnGeo = document.getElementById('btn-minha-localizacao');
+        if (btnGeo && navigator.geolocation) {
+            btnGeo.addEventListener('click', () => {
+                btnGeo.disabled = true;
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        setCoords(pos.coords.latitude, pos.coords.longitude);
+                        map.setView([pos.coords.latitude, pos.coords.longitude], 16);
+                        btnGeo.disabled = false;
+                    },
+                    () => {
+                        alert('Não foi possível obter sua localização.');
+                        btnGeo.disabled = false;
+                    },
+                    { enableHighAccuracy: true, timeout: 10000 }
+                );
+            });
+        } else if (btnGeo) {
+            btnGeo.disabled = true;
+        }
+
+        setTimeout(() => map.invalidateSize(), 200);
     }
 });
 </script>

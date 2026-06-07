@@ -1,6 +1,7 @@
 <?php
 require_once ONECHECK_ROOT . '/config/api.php';
 require_once ONECHECK_ROOT . '/includes/auth_api.php';
+require_once ONECHECK_ROOT . '/includes/rbac.php';
 
 $pageTitle  = $pageTitle  ?? 'OneCheck';
 $activeMenu = $activeMenu ?? '';

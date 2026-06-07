@@ -184,7 +184,7 @@ function dashboard_vistorias_mensal(): array
             foreach ($periodos as $idx => $p) {
                 if ($ckMes === $p['mes'] && $ckAno === $p['ano']) {
                     $total[$idx]++;
-                    if (($ck['status'] ?? '') === 'aceito') {
+                    if (($ck['status'] ?? '') === 'aceito' || ($ck['status'] ?? '') === 'pendente_aceite') {
                         $concluidas[$idx]++;
                     }
                     break;

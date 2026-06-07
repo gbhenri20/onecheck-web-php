@@ -158,9 +158,8 @@ final class ImovelService
         $pdo = Database::pdo();
         $pdo->prepare(
             'INSERT INTO imoveis (uuid, codigo, titulo, endereco, cidade, estado, cep, tipo, tamanho_m2, garagem, status, observacoes)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+             VALUES (UUID(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         )->execute([
-            self::uuid(),
             $d['codigo'],
             $d['titulo'],
             self::enderecoFormatado($d['endereco']),

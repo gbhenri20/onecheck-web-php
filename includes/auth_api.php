@@ -22,3 +22,8 @@ function api_initials(): string
     $parts = explode(' ', $user['nome'] ?? '');
     return strtoupper(substr($parts[0], 0, 1) . (isset($parts[1]) ? substr($parts[1], 0, 1) : ''));
 }
+
+function api_redirect_home(): void
+{
+    redirect(api_home_url());
+}

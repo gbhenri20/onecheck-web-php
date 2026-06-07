@@ -7,10 +7,10 @@ declare(strict_types=1);
  * base_path: caminho web até a pasta onecheck (ajuste se necessário).
  * Ex.: '/onecheck' para http://localhost/onecheck/
  */
-$basePath = getenv('ONECHECK_BASE_PATH');
-
 return [
-    // Local: /onecheck | Render/produção na raiz: defina ONECHECK_BASE_PATH="" no painel
-    'base_path' => $basePath !== false ? $basePath : '/onecheck',
+    // Local XAMPP: /onecheck | Render (raiz): deixe vazio via ONECHECK_BASE_PATH=
+    'base_path' => getenv('ONECHECK_BASE_PATH') !== false
+        ? getenv('ONECHECK_BASE_PATH')
+        : '/onecheck',
     'name'      => 'OneCheck',
 ];

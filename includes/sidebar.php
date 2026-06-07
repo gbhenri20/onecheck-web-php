@@ -1,19 +1,8 @@
 <?php
-$menu = [
-    ['section' => 'Principal'],
-    ['id'=>'dashboard', 'label'=>'Dashboard',    'icon'=>'bi-speedometer2',       'url'=>'dashboard/index.php'],
-    ['id'=>'imoveis',   'label'=>'Imóveis',       'icon'=>'bi-building',            'url'=>'imoveis/index.php'],
-    ['id'=>'vistorias', 'label'=>'Vistorias',     'icon'=>'bi-camera',              'url'=>'vistorias/index.php'],
-    ['id'=>'contratos', 'label'=>'Contratos',     'icon'=>'bi-file-earmark-text',   'url'=>'contratos/index.php'],
-    ['section' => 'Gestão'],
-    ['id'=>'problemas', 'label'=>'Problemas',     'icon'=>'bi-exclamation-triangle','url'=>'problemas/index.php'],
-    ['id'=>'mapa',      'label'=>'Mapa',          'icon'=>'bi-map',                 'url'=>'imoveis/mapa.php'],
-    ['id'=>'usuarios',  'label'=>'Usuários',      'icon'=>'bi-people',              'url'=>'usuarios/index.php'],
-    ['section' => 'Sistema'],
-    ['id'=>'logs',      'label'=>'Logs',          'icon'=>'bi-list-ul',             'url'=>'dashboard/logs.php'],
-];
+$menu = api_menu_items();
 
-function sidebar_nav(string $activeMenu): void {
+function sidebar_nav(string $activeMenu): void
+{
     global $menu;
     foreach ($menu as $item) {
         if (isset($item['section'])) {

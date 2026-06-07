@@ -2,10 +2,19 @@
 /**
  * OneCheck — Configuração da API
  * Toda comunicação com o backend passa por este arquivo.
+ *
+ * Defina ONECHECK_API_URL no ambiente ou .env do servidor:
+ *   ONECHECK_API_URL=http://localhost:8000/api/v1
  */
 
-define('API_BASE_URL', 'http://3.145.6.22:8000/api/v1');
-define('API_TIMEOUT',  10);
+$_apiUrl = getenv('ONECHECK_API_URL') ?: 'https://onecheck-api.onrender.com/api/v1';
+$_apiUrl = rtrim($_apiUrl, '/');
+if (!str_ends_with($_apiUrl, '/api/v1')) {
+    $_apiUrl .= '/api/v1';
+}
+define('API_BASE_URL', $_apiUrl);
+define('API_TIMEOUT',  (int)(getenv('ONECHECK_API_TIMEOUT') ?: 30));
+define('API_UPLOAD_URL', preg_replace('#/api/v1$#', '', API_BASE_URL));
 
 // ============================================================
 // Cliente HTTP central
@@ -42,6 +51,48 @@ class ApiClient
     public static function delete(string $path): array
     {
         return self::request('DELETE', API_BASE_URL . $path);
+    }
+
+    /**
+     * Upload multipart (fotos de checklist).
+     */
+    public static function upload(string $path, string $fieldName, string $filePath, string $mime = 'image/jpeg'): array
+    {
+        if (!is_readable($filePath)) {
+            return ['sucesso' => false, 'erro' => 'Arquivo não encontrado', '_status' => 0];
+        }
+
+        $token = self::token();
+        $headers = ['Accept: application/json'];
+        if ($token) {
+            $headers[] = 'Authorization: Bearer ' . $token;
+        }
+
+        $curlFile = new CURLFile($filePath, $mime, basename($filePath));
+        $postFields = [$fieldName => $curlFile];
+
+        $ch = curl_init(API_BASE_URL . $path);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => max(API_TIMEOUT, 60),
+            CURLOPT_HTTPHEADER     => $headers,
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => $postFields,
+            CURLOPT_SSL_VERIFYPEER => false,
+        ]);
+
+        $raw  = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $err  = curl_error($ch);
+        curl_close($ch);
+
+        if ($err || !$raw) {
+            return ['sucesso' => false, 'erro' => 'API indisponível: ' . $err, '_status' => 0];
+        }
+
+        $data = json_decode($raw, true) ?? ['sucesso' => false, 'erro' => 'Resposta inválida'];
+        $data['_status'] = $code;
+        return $data;
     }
 
     /**
@@ -149,8 +200,37 @@ class ApiClient
             return ['sucesso' => false, 'erro' => 'API indisponível: ' . $err, '_status' => 0];
         }
 
+        return self::normalizeResponse($raw, $code);
+    }
+
+    private static function normalizeResponse(string $raw, int $code): array
+    {
         $data = json_decode($raw, true) ?? ['sucesso' => false, 'erro' => 'Resposta inválida'];
         $data['_status'] = $code;
+
+        if (empty($data['sucesso'])) {
+            if (isset($data['detail']) && !isset($data['erro'])) {
+                $detail = $data['detail'];
+                if (is_string($detail)) {
+                    $data['erro'] = $detail;
+                } elseif (is_array($detail)) {
+                    $msgs = [];
+                    foreach ($detail as $item) {
+                        if (is_array($item) && isset($item['msg'])) {
+                            $msgs[] = (string) $item['msg'];
+                        }
+                    }
+                    $data['erro'] = $msgs ? implode('; ', $msgs) : 'Erro de validação na API';
+                }
+            }
+            if ($code === 404 && empty($data['erro'])) {
+                $data['erro'] = 'Endpoint não encontrado na API — faça redeploy do onecheck-api.';
+            }
+            if ($code === 405 && empty($data['erro'])) {
+                $data['erro'] = 'Método não permitido na API — faça redeploy do onecheck-api.';
+            }
+        }
+
         return $data;
     }
 

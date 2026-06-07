@@ -1,31 +1,81 @@
 <?php
 declare(strict_types=1);
 require_once dirname(__DIR__) . '/includes/bootstrap.php';
-Auth::requireLogin();
+require_once dirname(__DIR__) . '/config/api.php';
+require_once dirname(__DIR__) . '/includes/auth_api.php';
+require_once dirname(__DIR__) . '/includes/rbac.php';
+api_require_page('mapa');
 
-$pontos = ImovelService::listarParaMapa();
-$geojson = array_map(static fn($p) => [
-    'id'       => (int) $p['id'],
-    'codigo'   => $p['codigo'],
-    'titulo'   => $p['titulo'],
-    'status'   => $p['status'],
-    'lat'      => (float) $p['latitude'],
-    'lng'      => (float) $p['longitude'],
-    'endereco' => trim($p['logradouro'] . ($p['numero'] ? ', ' . $p['numero'] : '') . ' — ' . $p['cidade']),
-    'url'      => base_url('imoveis/detalhes.php?id=' . $p['id']),
-], $pontos);
+flash_render();
+
+$res = ApiClient::get('/imoveis', ['por_pagina' => 100, 'com_endereco' => 1]);
+$imoveis = $res['dados'] ?? [];
+
+$pontos = [];
+$semCoords = 0;
+$semEndereco = 0;
+
+foreach ($imoveis as $im) {
+    $end = $im['endereco'] ?? null;
+
+    if (!$end || !is_array($end)) {
+        $endRes = ApiClient::get('/imoveis/' . urlencode($im['id']) . '/endereco');
+        if (empty($endRes['sucesso'])) {
+            $semEndereco++;
+            continue;
+        }
+        $end = $endRes['dados'];
+    }
+
+    $coords = endereco_coords($end);
+    if ($coords) {
+        $lat = $coords['latitude'];
+        $lng = $coords['longitude'];
+        $fonte = 'cadastro';
+    } else {
+        $geo = Geocoder::geocodeEndereco(
+            $end['rua'] ?? $end['logradouro'] ?? '',
+            (string) ($end['numero'] ?? ''),
+            (string) ($end['bairro'] ?? ''),
+            (string) ($end['cidade'] ?? ''),
+            (string) ($end['estado'] ?? ''),
+            (string) ($end['cep'] ?? '')
+        );
+        if (!$geo) {
+            $semCoords++;
+            continue;
+        }
+        usleep(150000);
+        $lat = $geo['latitude'];
+        $lng = $geo['longitude'];
+        $fonte = 'geocode';
+    }
+
+    $pontos[] = [
+        'id'       => $im['id'],
+        'codigo'   => $im['codigo'] ?? substr($im['id'], 0, 8),
+        'titulo'   => $im['titulo'] ?? ($im['tipo'] ?? 'Imóvel'),
+        'status'   => $im['status'] ?? '',
+        'lat'      => $lat,
+        'lng'      => $lng,
+        'fonte'    => $fonte,
+        'endereco' => trim(($end['rua'] ?? '') . ', ' . ($end['numero'] ?? '') . ' — ' . ($end['cidade'] ?? '')),
+        'url'      => base_url('imoveis/editar.php?id=' . urlencode($im['id'])),
+    ];
+}
 
 $pageTitle  = 'Mapa de imóveis';
 $activeMenu = 'mapa';
 require ONECHECK_ROOT . '/includes/header.php';
 ?>
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-
 <div class="d-flex justify-content-between align-items-start mb-4">
     <div class="oc-page-header mb-0">
         <h2>Mapa de imóveis</h2>
-        <p><?= count($pontos) ?> imóvel(is) com coordenadas GPS</p>
+        <p><?= count($pontos) ?> imóvel(is) no mapa
+            <?php if ($semCoords): ?> · <?= $semCoords ?> sem coordenadas<?php endif; ?>
+            <?php if ($semEndereco): ?> · <?= $semEndereco ?> sem endereço<?php endif; ?>
+        </p>
     </div>
     <a href="<?= e(base_url('imoveis/index.php')) ?>" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-list me-1"></i>Lista
@@ -41,46 +91,34 @@ require ONECHECK_ROOT . '/includes/header.php';
 <?php if (!$pontos): ?>
 <div class="alert alert-info mt-3">
     <i class="bi bi-info-circle me-2"></i>
-    Nenhum imóvel com coordenadas GPS cadastradas. Edite um imóvel e marque "Atualizar coordenadas GPS".
+    Nenhum ponto no mapa. Edite os imóveis e preencha <strong>latitude</strong> e <strong>longitude</strong> no formulário (seção “Localização no mapa”).
+</div>
+<?php elseif ($semCoords > 0): ?>
+<div class="alert alert-warning mt-3 mb-0">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    <?= $semCoords ?> imóvel(is) sem coordenadas cadastradas — a geocodificação automática falhou ou a API ainda não foi atualizada.
 </div>
 <?php endif; ?>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const pontos = <?= json_encode($geojson, JSON_UNESCAPED_UNICODE) ?>;
-
-const map = L.map('mapa-imoveis', { zoomControl: true })
-    .setView([-23.55, -46.63], 11);
-
+const pontos = <?= json_encode($pontos, JSON_UNESCAPED_UNICODE) ?>;
+const map = L.map('mapa-imoveis').setView([-23.55, -46.63], 11);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    attribution: '&copy; OpenStreetMap'
 }).addTo(map);
-
-const iconVerde = L.divIcon({
-    className: '',
-    html: '<div style="width:14px;height:14px;background:#22c55e;border:2px solid #fff;border-radius:50%;box-shadow:0 0 6px rgba(34,197,94,.6)"></div>',
-    iconSize: [14, 14], iconAnchor: [7, 7], popupAnchor: [0, -10]
-});
 
 const markers = [];
 pontos.forEach(p => {
-    if (!p.lat || !p.lng) return;
-    const m = L.marker([p.lat, p.lng], { icon: iconVerde }).addTo(map);
-    m.bindPopup(
-        `<div style="min-width:180px">
-            <strong style="color:#1a1a1a">${p.codigo} · ${p.titulo}</strong><br>
-            <small style="color:#666">${p.endereco}</small><br>
-            <a href="${p.url}" style="color:#4f8ef7;font-size:12px">Ver detalhes →</a>
-        </div>`
-    );
+    const m = L.marker([p.lat, p.lng]).addTo(map);
+    const origem = p.fonte === 'cadastro' ? 'Coordenadas cadastradas' : 'Geocodificado';
+    m.bindPopup(`<strong>${p.codigo} · ${p.titulo}</strong><br><small>${p.endereco}</small><br><small class="text-muted">${origem}</small><br><a href="${p.url}">Ver imóvel →</a>`);
     markers.push(m);
 });
-
 if (markers.length) {
-    const group = L.featureGroup(markers);
-    map.fitBounds(group.getBounds().pad(0.25));
+    map.fitBounds(L.featureGroup(markers).getBounds().pad(0.25));
 }
+setTimeout(() => map.invalidateSize(), 300);
 </script>
 
 <?php require ONECHECK_ROOT . '/includes/footer.php'; ?>

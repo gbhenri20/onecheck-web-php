@@ -5,7 +5,8 @@ require_once dirname(__DIR__) . '/config/api.php';
 require_once dirname(__DIR__) . '/includes/auth_api.php';
 require_once dirname(__DIR__) . '/config/mock_data.php';
 
-api_require_login();
+require_once dirname(__DIR__) . '/includes/rbac.php';
+api_require_page('dashboard');
 
 // 1. Buscar dados em paralelo (Performance Boost)
 $requests = [
@@ -38,11 +39,19 @@ $graficoMensal = dashboard_vistorias_mensal();
 // Gráfico rosca — dados reais
 $locados     = (int)$stats['imoveis_locados'];
 $total       = (int)$stats['total_imoveis'];
-$disponiveis = max(0, $total - $locados);
+$resAllImoveis = ApiClient::get('/imoveis', ['por_pagina' => 100]);
+$statusCount = ['locado' => 0, 'disponivel' => 0, 'em_vistoria' => 0, 'manutencao' => 0];
+foreach (($resAllImoveis['dados'] ?? []) as $im) {
+    $st = $im['status'] ?? 'disponivel';
+    if (isset($statusCount[$st])) {
+        $statusCount[$st]++;
+    }
+}
+$disponiveis = $statusCount['disponivel'];
 $graficoStatus = [
     'labels' => ['Locado', 'Disponível', 'Em vistoria', 'Manutenção'],
-    'values' => [$locados, $disponiveis, 0, 0],
-    'colors' => ['#4ade80', '#4f8ef7', '#fbbf24', '#f87171'],
+    'values' => [$statusCount['locado'], $statusCount['disponivel'], $statusCount['em_vistoria'], $statusCount['manutencao']],
+    'colors' => ['#22C55E', '#3B82F6', '#FBBF24', '#F87171'],
 ];
 
 $pageTitle  = 'Dashboard';
@@ -135,8 +144,8 @@ require ONECHECK_ROOT . '/includes/header.php';
                     $sumVistorias  = array_sum($graficoMensal['total']);
                     $sumConcluidas = array_sum($graficoMensal['concluidas']);
                     ?>
-                    <span><b style="background:#4f8ef7"></b>Vistorias (<?= $sumVistorias ?>)</span>
-                    <span><b style="background:#4ade80"></b>Concluídas (<?= $sumConcluidas ?>)</span>
+                    <span><b style="background:#3B82F6"></b>Vistorias (<?= $sumVistorias ?>)</span>
+                    <span><b style="background:#22C55E"></b>Concluídas (<?= $sumConcluidas ?>)</span>
                 </div>
                 <div style="position:relative;height:200px">
                     <canvas id="chartVistorias"></canvas>
@@ -245,8 +254,8 @@ document.addEventListener('DOMContentLoaded', function() {
         data: {
             labels: graficoMensal.labels,
             datasets: [
-                { label: 'Vistorias',  data: graficoMensal.total,      backgroundColor: '#4f8ef7', borderRadius: 5, barPercentage: 0.6 },
-                { label: 'Concluídas', data: graficoMensal.concluidas,  backgroundColor: '#4ade80', borderRadius: 5, barPercentage: 0.6 }
+                { label: 'Vistorias',  data: graficoMensal.total,      backgroundColor: '#3B82F6', borderRadius: 5, barPercentage: 0.6 },
+                { label: 'Concluídas', data: graficoMensal.concluidas,  backgroundColor: '#22C55E', borderRadius: 5, barPercentage: 0.6 }
             ]
         },
         options: {
@@ -263,8 +272,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             },
             scales: {
-                x: { ticks: { color: '#6b7fa3', font: { size: 11 } }, grid: { color: '#1e2535' } },
-                y: { ticks: { color: '#6b7fa3', font: { size: 11 } }, grid: { color: '#1e2535' }, beginAtZero: true }
+                x: { ticks: { color: '#94A3B8', font: { size: 11 } }, grid: { color: '#243044' } },
+                y: { ticks: { color: '#94A3B8', font: { size: 11 } }, grid: { color: '#243044' }, beginAtZero: true }
             }
         }
     });

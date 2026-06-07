@@ -3,7 +3,12 @@ declare(strict_types=1);
 require_once dirname(__DIR__) . '/includes/bootstrap.php';
 require_once dirname(__DIR__) . '/config/api.php';
 require_once dirname(__DIR__) . '/includes/auth_api.php';
-api_require_login();
+require_once dirname(__DIR__) . '/includes/rbac.php';
+api_require_page('imoveis');
+if (!api_can_create('imoveis')) {
+    flash_set('error', 'Sem permissão para cadastrar imóveis.');
+    redirect(base_url('imoveis/index.php'));
+}
 
 $erro  = '';
 $sucesso = '';
@@ -34,23 +39,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!empty($resImovel['sucesso']) && !empty($resImovel['dados']['id'])) {
             $imovelId = $resImovel['dados']['id'];
-            $rua    = trim($_POST['rua']    ?? '');
-            $numero = trim($_POST['numero'] ?? '');
-            $bairro = trim($_POST['bairro'] ?? '');
-            $cidade = trim($_POST['cidade'] ?? '');
-            $estado = strtoupper(trim($_POST['estado'] ?? ''));
-            $cep    = preg_replace('/\D/', '', $_POST['cep'] ?? '');
-
-            if ($rua !== '' && $cidade !== '' && strlen($estado) === 2) {
-                ApiClient::post('/imoveis/' . $imovelId . '/endereco', [
-                    'rua'         => $rua,
-                    'numero'      => $numero,
-                    'complemento' => trim($_POST['complemento'] ?? ''),
-                    'bairro'      => $bairro,
-                    'cidade'      => $cidade,
-                    'estado'      => $estado,
-                    'cep'         => $cep,
-                ]);
+            $endPayload = endereco_payload_from_post();
+            if ($endPayload !== null) {
+                ApiClient::post('/imoveis/' . $imovelId . '/endereco', $endPayload);
             }
             redirect(base_url('imoveis/index.php'));
         } else {

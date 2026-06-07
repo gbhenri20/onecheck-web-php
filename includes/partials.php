@@ -89,6 +89,11 @@ function get_int(string $key): int
     return (int) ($_GET[$key] ?? 0);
 }
 
+function get_str(string $key): string
+{
+    return trim($_GET[$key] ?? '');
+}
+
 function post_str(string $key): string
 {
     return trim($_POST[$key] ?? '');

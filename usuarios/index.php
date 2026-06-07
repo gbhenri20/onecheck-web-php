@@ -3,7 +3,8 @@ declare(strict_types=1);
 require_once dirname(__DIR__) . '/includes/bootstrap.php';
 require_once dirname(__DIR__) . '/config/api.php';
 require_once dirname(__DIR__) . '/includes/auth_api.php';
-api_require_login();
+require_once dirname(__DIR__) . '/includes/rbac.php';
+api_require_page('usuarios');
 
 $roleF  = $_GET['role'] ?? '';
 $pagina = max(1, (int)($_GET['pagina'] ?? 1));

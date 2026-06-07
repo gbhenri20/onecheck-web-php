@@ -1,48 +1,48 @@
-# OneCheck — Blueprint Render
-# https://render.com/docs/blueprint-spec
-#
-# O que o Blueprint faz sozinho:
-# 1. Cria o PostgreSQL (onecheck-db)
-# 2. Injeta DATABASE_URL no serviço PHP (onecheck-app)
-# 3. A cada start do container, roda a migração SQL (scripts/migrate-db.sh)
-#
-# Depois do primeiro deploy, só falta criar o admin:
-#   https://SEU-APP.onrender.com/public/install.php
-# (remova install.php em produção)
-#
-# Opcional (plano pago): preDeployCommand também roda a migração antes do deploy.
-
-databases:
-  - name: onecheck-db
-    plan: free
-    databaseName: onecheck
-
-services:
-  - type: web
-    name: onecheck-mobile-ui
-    runtime: static
-    plan: free
-    staticPublishPath: ./OneCheck
-    routes:
-      - type: rewrite
-        source: /
-        destination: /index.html
-
-  - type: web
-    name: onecheck-app
-    runtime: docker
-    plan: free
-    dockerfilePath: ./Dockerfile
-    healthCheckPath: /public/login.php
-    # Disponível em planos pagos (redundante com a migração no entrypoint):
-    # preDeployCommand: bash scripts/migrate-db.sh
-    envVars:
-      - key: ONECHECK_BASE_PATH
-        value: ""
-      - key: ONECHECK_DB_DRIVER
-        value: pgsql
-      - key: DATABASE_URL
-        fromDatabase:
-          name: onecheck-db
-          property: connectionString
-
+# Render Blueprint — deve ficar na RAIZ do repositório Git
+# Deploy: Render Dashboard → New + → Blueprint (NÃO "Web Service")
+
+services:
+  - type: web
+    name: onecheck-api
+    runtime: python
+    region: oregon
+    plan: free
+    rootDir: onecheck-api
+    buildCommand: pip install -r requirements.txt
+    startCommand: bash start.sh
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.5"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PUBLIC_BASE_URL
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: onecheck-db
+          property: connectionString
+      - key: CORS_ORIGINS
+        value: "*"
+      - key: SEED_SECRET
+        generateValue: true
+
+  - type: web
+    name: onecheck-web
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./Dockerfile.web
+    dockerContext: .
+    healthCheckPath: /public/login.php
+    envVars:
+      - key: ONECHECK_API_URL
+        value: https://onecheck-api.onrender.com/api/v1
+      - key: ONECHECK_BASE_PATH
+        value: ""
+
+databases:
+  - name: onecheck-db
+    plan: free
+    databaseName: onecheck
+    user: onecheck

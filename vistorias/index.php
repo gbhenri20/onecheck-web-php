@@ -3,7 +3,10 @@ declare(strict_types=1);
 require_once dirname(__DIR__) . '/includes/bootstrap.php';
 require_once dirname(__DIR__) . '/config/api.php';
 require_once dirname(__DIR__) . '/includes/auth_api.php';
-api_require_login();
+require_once dirname(__DIR__) . '/includes/rbac.php';
+api_require_page('vistorias');
+
+flash_render();
 
 // 1. Buscar contratos em paralelo
 $resContratos = ApiClient::get('/contratos', ['por_pagina' => 100]);
@@ -40,16 +43,26 @@ require ONECHECK_ROOT . '/includes/header.php';
         <h2>Vistorias</h2>
         <p><?= count($checklists) ?> vistoria(s) registrada(s)</p>
     </div>
-    <a href="<?= e(base_url('vistorias/nova.php')) ?>" class="btn btn-primary btn-sm">
-        <i class="bi bi-plus-lg me-1"></i>Nova vistoria
-    </a>
+    <div class="d-flex gap-2 flex-wrap">
+        <?php if (api_can_create('vistorias')): ?>
+        <a href="<?= e(base_url('vistorias/nova.php')) ?>" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg me-1"></i>Nova vistoria
+        </a>
+        <?php endif; ?>
+    </div>
 </div>
 
 <div class="card">
     <div class="card-body p-0">
         <?php if (!$checklists): ?>
-        <div class="p-4" style="color:#6b7fa3;font-size:13px">
-            <i class="bi bi-camera me-2"></i>Nenhuma vistoria registrada na API ainda.
+        <div class="p-5 text-center">
+            <i class="bi bi-camera" style="font-size:48px;color:var(--oc-border)"></i>
+            <p class="mt-3 mb-1" style="color:var(--oc-muted)">Nenhuma vistoria registrada ainda.</p>
+            <?php if (api_can_create('vistorias')): ?>
+            <a href="<?= e(base_url('vistorias/nova.php')) ?>" class="btn btn-primary btn-sm mt-2">
+                <i class="bi bi-plus-lg me-1"></i>Criar vistoria
+            </a>
+            <?php endif; ?>
         </div>
         <?php else: ?>
         <table class="table table-hover mb-0">
@@ -81,9 +94,14 @@ require ONECHECK_ROOT . '/includes/header.php';
                     <td style="font-size:12px"><?= e(substr($ck['data_vistoria'] ?? 'Não realizada', 0, 10)) ?></td>
                     <td style="font-size:12px;color:#6b7fa3"><?= e(substr($ck['created_at'] ?? '', 0, 10)) ?></td>
                     <td class="text-end">
-                        <a href="<?= e(base_url('vistorias/checklist.php?id=' . $ck['id'] . '&contrato_id=' . $ck['_contrato_id'])) ?>" class="btn btn-light btn-sm">
-                            <i class="bi bi-pencil-square me-1"></i>Acessar
+                        <a href="<?= e(base_url('vistorias/checklist.php?id=' . $ck['id'] . '&contrato_id=' . $ck['_contrato_id'])) ?>" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-eye me-1"></i>Ver
                         </a>
+                        <?php if (($ck['status'] ?? '') === 'pendente_aceite' && in_array(api_role(), ['admin', 'gestor', 'locatario'], true)): ?>
+                        <a href="<?= e(base_url('vistorias/checklist.php?id=' . $ck['id'] . '&contrato_id=' . $ck['_contrato_id'])) ?>" class="btn btn-success btn-sm">
+                            <i class="bi bi-check-lg me-1"></i>Aceitar
+                        </a>
+                        <?php endif; ?>
                     </td>
                 </tr>
                 <?php endforeach; ?>

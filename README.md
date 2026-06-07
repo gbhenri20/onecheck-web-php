@@ -1,6 +1,6 @@
 # OneCheck
 
-Sistema web em **PHP + PostgreSQL + Bootstrap** para gestão de imóveis, **vistorias com fotos** (recebidas pelo APK **Kotlin**), **contratos** e problemas.
+Sistema web em **PHP + MySQL + Bootstrap** para gestão de imóveis, **vistorias com fotos** (recebidas pelo APK **Kotlin**), **contratos** e problemas.
 
 ## Estrutura de pastas
 
@@ -28,28 +28,20 @@ onecheck/
 
 ## Requisitos
 
-- PHP 8.1+ (extensões: `pdo_pgsql`, `fileinfo`, `json`; opcional `pdo_mysql` para legado)
-- PostgreSQL 14+ (recomendado) ou MySQL 8+ com `ONECHECK_DB_DRIVER=mysql`
-- Apache (XAMPP/Laragon) ou nginx + php-fpm / Docker
+- PHP 8.1+ (extensões: pdo_mysql, fileinfo, json)
+- MySQL 8+
+- Apache (XAMPP/Laragon) ou nginx + php-fpm
 
-## Instalação local (PostgreSQL)
+## Instalação (XAMPP no Windows)
 
-1. Crie o banco `onecheck` e importe o schema:
-   ```bash
-   psql -U postgres -d onecheck -f database/migrations/001_schema_postgres.sql
-   ```
-2. Variáveis opcionais: `ONECHECK_DB_HOST`, `ONECHECK_DB_USER`, `ONECHECK_DB_PASS`, `ONECHECK_DB_NAME`
-3. Acesse: `http://localhost/onecheck/public/install.php` (ajuste `base_path` em `config/app.php` se necessário)
-4. Login: `public/login.php` — `admin@onecheck.local` / `admin123`
-
-## Instalação (XAMPP + MySQL legado)
-
-1. Defina `ONECHECK_DB_DRIVER=mysql` e importe o SQL MySQL (se disponível no projeto).
-2. Copie a pasta para `htdocs/onecheck` e configure `config/database.php`.
-
-## Deploy no Render
-
-Use o Blueprint `render.yaml`: cria o Postgres (`onecheck-db`), injeta `DATABASE_URL` no PHP e aplica o schema automaticamente ao iniciar o container. Depois do deploy, acesse apenas `public/install.php` para criar o admin.
+1. Copie a pasta `onecheck` para `C:\xampp\htdocs\onecheck`
+2. No phpMyAdmin ou terminal MySQL, execute:
+   - `database/migrations/001_schema.sql`
+3. Ajuste `config/database.php` se necessário (usuário/senha do MySQL)
+4. Acesse no navegador: `http://localhost/onecheck/public/install.php`
+5. Login: `http://localhost/onecheck/public/login.php`
+   - E-mail: `admin@onecheck.local`
+   - Senha: `admin123`
 
 ## API mobile
 

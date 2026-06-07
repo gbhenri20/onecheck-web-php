@@ -3,68 +3,77 @@
 declare(strict_types=1);
 
 require_once dirname(__DIR__) . '/includes/bootstrap.php';
-Auth::requireLogin();
+require_once dirname(__DIR__) . '/config/api.php';
+require_once dirname(__DIR__) . '/includes/auth_api.php';
+require_once dirname(__DIR__) . '/includes/rbac.php';
+api_require_page('problemas');
 
-$user = Auth::user();
-$pdo = Database::pdo();
-$imoveis = $pdo->query('SELECT id, codigo, titulo FROM imoveis ORDER BY codigo')->fetchAll();
+if (!api_can_create('problemas')) {
+    flash_set('error', 'Sem permissão para registrar problemas.');
+    redirect(base_url('problemas/index.php'));
+}
 
-$preImovel = get_int('imovel_id');
-$preVistoria = get_int('vistoria_id');
 $erro = '';
+$resContratos = ApiClient::get('/contratos', ['por_pagina' => 100, 'status' => 'ativo']);
+$contratos = $resContratos['dados'] ?? [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $imovelId = (int) ($_POST['imovel_id'] ?? 0);
-    $vistoriaId = (int) ($_POST['vistoria_id'] ?? 0) ?: null;
+    $contratoId = post_str('contrato_id');
     $titulo = post_str('titulo');
     $desc = post_str('descricao');
-    $prioridade = $_POST['prioridade'] ?? 'media';
+    $prioridade = $_POST['prioridade'] ?? 'normal';
 
-    if ($imovelId < 1 || $titulo === '') {
-        $erro = 'Imóvel e título são obrigatórios.';
+    if ($contratoId === '' || $titulo === '') {
+        $erro = 'Contrato e título são obrigatórios.';
     } else {
-        $pdo->prepare(
-            'INSERT INTO problemas (imovel_id, vistoria_id, titulo, descricao, prioridade, criado_por)
-             VALUES (?, ?, ?, ?, ?, ?)'
-        )->execute([$imovelId, $vistoriaId, $titulo, $desc ?: null, $prioridade, $user['id']]);
-        flash_set('success', 'Problema registrado.');
-        redirect(base_url('problemas/index.php'));
+        $res = ApiClient::post('/contratos/' . urlencode($contratoId) . '/problemas', [
+            'titulo' => $titulo,
+            'descricao' => $desc !== '' ? $desc : null,
+            'prioridade' => $prioridade,
+            'status' => 'aberto',
+        ]);
+        if (!empty($res['sucesso'])) {
+            flash_set('success', 'Problema registrado.');
+            redirect(base_url('problemas/index.php'));
+        }
+        $erro = $res['erro'] ?? 'Erro ao registrar problema.';
     }
 }
 
 $pageTitle = 'Novo problema';
 $activeMenu = 'problemas';
 require ONECHECK_ROOT . '/includes/header.php';
-page_header('Registrar problema', '', '<a href="' . e(base_url('problemas/index.php')) . '" class="btn btn-link btn-sm">Voltar</a>');
+flash_render();
+page_header('Registrar problema', '', '<a href="' . e(base_url('problemas/index.php')) . '" class="btn btn-outline-secondary btn-sm">Voltar</a>');
 ?>
 
 <?php if ($erro): ?><div class="alert alert-danger"><?= e($erro) ?></div><?php endif; ?>
 
-<div class="card border-0 shadow-sm">
+<div class="card">
     <div class="card-body">
-        <form method="post" class="row g-3">
-            <div class="col-md-8">
-                <label class="form-label">Imóvel</label>
-                <select name="imovel_id" class="form-select" required>
-                    <?php foreach ($imoveis as $i): ?>
-                    <option value="<?= (int) $i['id'] ?>" <?= $preImovel === (int) $i['id'] ? 'selected' : '' ?>>
-                        <?= e($i['codigo']) ?> — <?= e($i['titulo']) ?>
+        <?php if (!$contratos): ?>
+        <div class="alert alert-warning">Nenhum contrato ativo. Crie um contrato antes de registrar problemas.</div>
+        <?php else: ?>
+        <form method="post" class="row g-3" autocomplete="off">
+            <div class="col-12">
+                <label class="form-label">Contrato <span class="text-danger">*</span></label>
+                <select name="contrato_id" class="form-select" required>
+                    <option value="">Selecione...</option>
+                    <?php foreach ($contratos as $ct): ?>
+                    <option value="<?= e($ct['id']) ?>" <?= (post_str('contrato_id') === $ct['id']) ? 'selected' : '' ?>>
+                        Contrato · início <?= e(substr($ct['data_inicio'] ?? '', 0, 10)) ?>
                     </option>
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="col-md-4">
-                <label class="form-label">Vistoria (opcional)</label>
-                <input type="number" name="vistoria_id" class="form-control" value="<?= $preVistoria ?: '' ?>" placeholder="ID">
-            </div>
             <div class="col-12">
-                <label class="form-label">Título</label>
+                <label class="form-label">Título <span class="text-danger">*</span></label>
                 <input name="titulo" class="form-control" required placeholder="Ex: Infiltração no banheiro">
             </div>
             <div class="col-md-4">
                 <label class="form-label">Prioridade</label>
                 <select name="prioridade" class="form-select">
-                    <?php foreach (['baixa','media','alta','urgente'] as $pr): ?>
+                    <?php foreach (['normal', 'alta', 'urgente'] as $pr): ?>
                     <option value="<?= e($pr) ?>"><?= e(ucfirst($pr)) ?></option>
                     <?php endforeach; ?>
                 </select>
@@ -74,9 +83,10 @@ page_header('Registrar problema', '', '<a href="' . e(base_url('problemas/index.
                 <textarea name="descricao" class="form-control" rows="4"></textarea>
             </div>
             <div class="col-12">
-                <button class="btn btn-primary">Salvar</button>
+                <button class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Salvar</button>
             </div>
         </form>
+        <?php endif; ?>
     </div>
 </div>
 

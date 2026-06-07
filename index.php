@@ -2,5 +2,9 @@
 
 declare(strict_types=1);
 
-header('Location: /onecheck/public/login.php');
+$base = getenv('ONECHECK_BASE_PATH');
+if ($base === false) {
+    $base = '/onecheck';
+}
+header('Location: ' . rtrim($base, '/') . '/public/login.php');
 exit;

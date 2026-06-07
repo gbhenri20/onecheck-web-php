@@ -29,8 +29,8 @@ if ($stmt->fetch()) {
 } else {
     $pdo->prepare(
         'INSERT INTO usuarios (uuid, nome, email, senha_hash, perfil, mfa_obrigatorio)
-         VALUES (?, ?, ?, ?, ?, 1)'
-    )->execute([ImovelService::uuid(), 'Administrador', $email, $hash, 'admin']);
+         VALUES (UUID(), ?, ?, ?, ?, 1)'
+    )->execute(['Administrador', $email, $hash, 'admin']);
     $msg = 'Usuário admin criado (configure MFA no primeiro login).';
 }
 

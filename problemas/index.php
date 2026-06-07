@@ -3,7 +3,8 @@ declare(strict_types=1);
 require_once dirname(__DIR__) . '/includes/bootstrap.php';
 require_once dirname(__DIR__) . '/config/api.php';
 require_once dirname(__DIR__) . '/includes/auth_api.php';
-api_require_login();
+require_once dirname(__DIR__) . '/includes/rbac.php';
+api_require_page('problemas');
 
 // Problemas vêm vinculados a contratos — buscar todos contratos e listar problemas
 // API: GET /contratos/{id}/problemas
@@ -30,6 +31,11 @@ require ONECHECK_ROOT . '/includes/header.php';
         <h2>Problemas</h2>
         <p><?= count($problemas) ?> problema(s) registrado(s)</p>
     </div>
+    <?php if (api_can_create('problemas')): ?>
+    <a href="<?= e(base_url('problemas/novo.php')) ?>" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-lg me-1"></i>Novo problema
+    </a>
+    <?php endif; ?>
 </div>
 
 <div class="card">
@@ -43,7 +49,7 @@ require ONECHECK_ROOT . '/includes/header.php';
             <thead>
                 <tr>
                     <th>Título</th>
-                    <th>Cômodo</th>
+                    <th>Prioridade</th>
                     <th>Status</th>
                     <th>Registrado em</th>
                 </tr>
@@ -52,7 +58,7 @@ require ONECHECK_ROOT . '/includes/header.php';
                 <?php foreach ($problemas as $pr): ?>
                 <tr>
                     <td><?= e($pr['titulo'] ?? '—') ?></td>
-                    <td style="font-size:11px;color:#6b7fa3"><?= e(substr($pr['comodo_id'] ?? '', 0, 8)) ?>...</td>
+                    <td><span class="badge bg-secondary"><?= e($pr['prioridade'] ?? 'normal') ?></span></td>
                     <td>
                         <?php
                         echo match($pr['status'] ?? '') {

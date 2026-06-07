@@ -5,9 +5,11 @@ require_once dirname(__DIR__) . '/config/api.php';
 
 // Já logado
 if (!empty($_SESSION['api_token'])) {
-    redirect(base_url('dashboard/index.php'));
+    require_once dirname(__DIR__) . '/includes/rbac.php';
+    redirect(api_home_url());
 }
 
+$logoutMsg = isset($_GET['logout']);
 $erro = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -20,11 +22,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $res = ApiClient::post('/auth/login', ['email' => $email, 'senha' => $senha]);
 
         if (!empty($res['sucesso']) && !empty($res['dados']['access_token'])) {
-            // Login direto sem MFA
             $_SESSION['api_token']         = $res['dados']['access_token'];
             $_SESSION['api_refresh_token'] = $res['dados']['refresh_token'];
             $_SESSION['user']              = $res['dados']['usuario'];
-            redirect(base_url('dashboard/index.php'));
+            require_once dirname(__DIR__) . '/includes/rbac.php';
+            redirect(api_home_url());
 
         } elseif (!empty($res['dados']['mfa_required'])) {
             // MFA necessário
@@ -59,10 +61,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <span class="brand-one">One</span><span class="brand-check">Check</span>
             </span>
         </div>
-        <p style="text-align:center;font-size:13px;color:#6b7fa3;margin-bottom:28px">
+        <p style="text-align:center;font-size:14px;color:#94A3B8;margin-bottom:32px">
             Sistema de gestão de imóveis
         </p>
 
+        <?php if ($logoutMsg): ?>
+        <div class="alert alert-success py-2 mb-3">Você saiu com sucesso.</div>
+        <?php endif; ?>
         <?php if ($erro): ?>
         <div class="alert alert-danger py-2 mb-3"><?= e($erro) ?></div>
         <?php endif; ?>
@@ -71,14 +76,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="mb-3">
                 <label class="form-label" for="email"><i class="bi bi-envelope me-1"></i>E-mail</label>
                 <input type="email" class="form-control" id="email" name="email"
-                       required value="<?= e($_POST['email'] ?? '') ?>" placeholder="seu@email.com">
+                       required autocomplete="off" value="" placeholder="seu@email.com">
             </div>
             <div class="mb-4">
                 <label class="form-label" for="senha"><i class="bi bi-lock me-1"></i>Senha</label>
                 <input type="password" class="form-control" id="senha" name="senha"
-                       required placeholder="••••••••">
+                       required autocomplete="new-password" placeholder="••••••••">
             </div>
-            <button type="submit" class="btn btn-primary w-100" style="padding:10px;font-size:14px">
+            <button type="submit" class="btn btn-primary w-100" style="padding:14px;font-size:16px;font-weight:600;border-radius:12px;min-height:52px">
                 Entrar <i class="bi bi-arrow-right ms-1"></i>
             </button>
         </form>

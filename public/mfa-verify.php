@@ -3,7 +3,10 @@ declare(strict_types=1);
 require_once dirname(__DIR__) . '/includes/bootstrap.php';
 require_once dirname(__DIR__) . '/config/api.php';
 
-if (!empty($_SESSION['api_token'])) redirect(base_url('dashboard/index.php'));
+if (!empty($_SESSION['api_token'])) {
+    require_once dirname(__DIR__) . '/includes/rbac.php';
+    redirect(api_home_url());
+}
 if (empty($_SESSION['mfa_temp_token'])) redirect(base_url('public/login.php'));
 
 $erro = '';
@@ -20,7 +23,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['api_token']         = $res['dados']['access_token'];
         $_SESSION['api_refresh_token'] = $res['dados']['refresh_token'];
         $_SESSION['user']              = $res['dados']['usuario'];
-        redirect(base_url('dashboard/index.php'));
+        require_once dirname(__DIR__) . '/includes/rbac.php';
+        redirect(api_home_url());
     } else {
         $erro = 'Código inválido. Tente novamente.';
     }

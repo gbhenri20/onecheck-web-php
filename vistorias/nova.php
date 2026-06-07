@@ -3,7 +3,12 @@ declare(strict_types=1);
 require_once dirname(__DIR__) . '/includes/bootstrap.php';
 require_once dirname(__DIR__) . '/config/api.php';
 require_once dirname(__DIR__) . '/includes/auth_api.php';
-api_require_login();
+require_once dirname(__DIR__) . '/includes/rbac.php';
+api_require_page('vistorias');
+if (!api_can_create('vistorias')) {
+    flash_set('error', 'Sem permissão para criar vistorias.');
+    redirect(base_url('vistorias/index.php'));
+}
 
 $erro = '';
 
@@ -55,6 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
 
             if (!empty($res['sucesso'])) {
+                flash_set('success', 'Vistoria criada com sucesso.');
                 redirect(base_url('vistorias/index.php'));
             } else {
                 if (!empty($res['erros'])) {

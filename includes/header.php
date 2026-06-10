@@ -40,8 +40,7 @@ $initials     = api_initials();
             <span class="text-muted small ms-2">Locatário</span>
         </a>
         <div class="d-flex gap-2 align-items-center">
-            <span class="text-muted small d-none d-sm-inline"><?= e($user['nome'] ?? '') ?></span>
-            <a class="btn btn-sm btn-outline-light" href="<?= e(base_url('public/logout.php')) ?>">Sair</a>
+            <?php require ONECHECK_ROOT . '/includes/user_menu.php'; ?>
         </div>
     </div>
 </nav>

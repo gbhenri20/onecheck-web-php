@@ -4,6 +4,7 @@ require_once dirname(__DIR__) . '/includes/bootstrap.php';
 require_once dirname(__DIR__) . '/config/api.php';
 require_once dirname(__DIR__) . '/includes/auth_api.php';
 require_once dirname(__DIR__) . '/includes/rbac.php';
+require_once dirname(__DIR__) . '/includes/scope.php';
 api_require_page('usuarios');
 
 $roleF  = $_GET['role'] ?? '';
@@ -27,9 +28,11 @@ require ONECHECK_ROOT . '/includes/header.php';
         <h2>Usuários</h2>
         <p><?= $total ?> usuário(s) cadastrado(s)</p>
     </div>
+    <?php if (api_can_create('usuarios')): ?>
     <a href="<?= e(base_url('usuarios/novo.php')) ?>" class="btn btn-primary btn-sm">
         <i class="bi bi-plus-lg me-1"></i>Novo usuário
     </a>
+    <?php endif; ?>
 </div>
 
 <div class="card mb-3">
@@ -40,8 +43,10 @@ require ONECHECK_ROOT . '/includes/header.php';
                 <select name="role" class="form-select form-select-sm">
                     <option value="">Todos</option>
                     <option value="admin"       <?= $roleF==='admin'       ? 'selected':'' ?>>Admin</option>
+                    <option value="gestor"      <?= $roleF==='gestor'      ? 'selected':'' ?>>Gestor</option>
                     <option value="vistoriador" <?= $roleF==='vistoriador' ? 'selected':'' ?>>Vistoriador</option>
                     <option value="locatario"   <?= $roleF==='locatario'   ? 'selected':'' ?>>Locatário</option>
+                    <option value="visualizador"<?= $roleF==='visualizador'? 'selected':'' ?>>Visualizador</option>
                 </select>
             </div>
             <div class="col-auto">
@@ -67,6 +72,7 @@ require ONECHECK_ROOT . '/includes/header.php';
                     <th>Perfil</th>
                     <th>MFA</th>
                     <th>Cadastrado em</th>
+                    <th class="text-end">Ações</th>
                 </tr>
             </thead>
             <tbody>
@@ -75,23 +81,30 @@ require ONECHECK_ROOT . '/includes/header.php';
                     <td><?= e($u['nome'] ?? '—') ?></td>
                     <td style="font-size:12px"><?= e($u['email'] ?? '—') ?></td>
                     <td>
-                        <?php
-                        echo match($u['role'] ?? '') {
-                            'admin'       => '<span class="badge bg-danger">Admin</span>',
-                            'vistoriador' => '<span class="badge bg-primary">Vistoriador</span>',
-                            'locatario'   => '<span class="badge bg-success">Locatário</span>',
-                            default       => '<span class="badge bg-secondary">' . e($u['role'] ?? '') . '</span>',
-                        };
-                        ?>
+                        <span class="badge bg-secondary"><?= e(api_role_label($u['role'] ?? '')) ?></span>
                     </td>
                     <td>
-                        <?php if ($u['mfa_ativo'] ?? false): ?>
+                        <?php if (api_mfa_ativo($u)): ?>
                             <span class="badge bg-success"><i class="bi bi-shield-check"></i> Ativo</span>
+                        <?php elseif (!empty($u['mfa_enabled'])): ?>
+                            <span class="badge bg-warning text-dark"><i class="bi bi-shield-exclamation"></i> Pendente</span>
                         <?php else: ?>
-                            <span class="badge bg-secondary">Inativo</span>
+                            <span class="badge bg-secondary"><i class="bi bi-shield-x"></i> Não configurado</span>
                         <?php endif; ?>
                     </td>
                     <td style="font-size:12px;color:#6b7fa3"><?= e(substr($u['created_at'] ?? '', 0, 10)) ?></td>
+                    <td class="text-end">
+                        <?php if (!api_mfa_ativo($u)): ?>
+                        <a href="<?= e(base_url('usuarios/mfa-configurar.php?id=' . urlencode($u['id']))) ?>"
+                           class="btn btn-outline-primary btn-sm" title="Configurar MFA">
+                            <i class="bi bi-shield-plus"></i>
+                        </a>
+                        <?php endif; ?>
+                        <a href="<?= e(base_url('usuarios/editar.php?id=' . urlencode($u['id']))) ?>"
+                           class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-pencil"></i> Editar
+                        </a>
+                    </td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>

@@ -61,6 +61,23 @@ body.app-body {
   display: flex; align-items: center; justify-content: center;
   font-size: 11px; font-weight: 600; color: var(--oc-primary);
 }
+.oc-avatar-sm {
+  width: 28px; height: 28px;
+  font-size: 10px;
+}
+.app-navbar .dropdown-menu {
+  background: var(--oc-surface);
+  border-color: var(--oc-border);
+  min-width: 220px;
+}
+.app-navbar .dropdown-item {
+  color: var(--oc-text);
+  font-size: 13px;
+}
+.app-navbar .dropdown-item:hover {
+  background: var(--oc-surface2);
+  color: var(--oc-text);
+}
 
 /* ===== SIDEBAR ===== */
 .app-sidebar {

@@ -4,33 +4,19 @@ require_once dirname(__DIR__) . '/includes/bootstrap.php';
 require_once dirname(__DIR__) . '/config/api.php';
 require_once dirname(__DIR__) . '/includes/auth_api.php';
 require_once dirname(__DIR__) . '/includes/rbac.php';
+require_once dirname(__DIR__) . '/includes/scope.php';
 api_require_page('vistorias');
 
 flash_render();
 
-// 1. Buscar contratos em paralelo
-$resContratos = ApiClient::get('/contratos', ['por_pagina' => 100]);
-$contratos    = $resContratos['dados'] ?? [];
-
-$checklists = [];
-if (!empty($contratos)) {
-    // 2. Buscar checklists de todos os contratos EM PARALELO (Performance Boost)
-    $requests = [];
-    foreach ($contratos as $ct) {
-        $requests[$ct['id']] = '/contratos/' . $ct['id'] . '/checklists';
-    }
-    
-    $responses = ApiClient::multi_get($requests);
-    
-    foreach ($responses as $contratoId => $resC) {
-        foreach (($resC['dados'] ?? []) as $c) {
-            $c['_contrato_id'] = $contratoId;
-            $checklists[] = $c;
-        }
-    }
+$lookups   = api_fetch_lookups();
+$contratos = api_load_scoped_contratos()['dados'] ?? [];
+$byId      = [];
+foreach ($contratos as $ct) {
+    $byId[$ct['id']] = $ct;
 }
 
-// Ordenar por data de criação (mais recentes primeiro)
+$checklists = api_load_scoped_checklists();
 usort($checklists, fn($a, $b) => ($b['created_at'] ?? '') <=> ($a['created_at'] ?? ''));
 
 $pageTitle  = 'Vistorias';
@@ -68,17 +54,29 @@ require ONECHECK_ROOT . '/includes/header.php';
         <table class="table table-hover mb-0">
             <thead>
                 <tr>
+                    <th>Imóvel</th>
                     <th>Tipo</th>
+                    <th>Vistoriador</th>
                     <th>Status</th>
                     <th>Data vistoria</th>
-                    <th>Criado em</th>
                     <th class="text-end">Ações</th>
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($checklists as $ck): ?>
+                <?php foreach ($checklists as $ck):
+                    $ct = $byId[$ck['_contrato_id'] ?? ''] ?? null;
+                    $im = $ct ? ($lookups['imoveis'][$ct['imovel_id'] ?? ''] ?? null) : null;
+                    $vis = $lookups['usuarios'][$ck['vistoriador_id'] ?? ''] ?? null;
+                ?>
                 <tr>
+                    <td>
+                        <div class="fw-semibold small"><?= e(api_imovel_label($im)) ?></div>
+                        <?php if ($im): ?>
+                        <div class="text-muted" style="font-size:11px"><?= e(api_endereco_label($im['endereco'] ?? null)) ?></div>
+                        <?php endif; ?>
+                    </td>
                     <td><span class="badge bg-primary"><?= e(ucfirst($ck['tipo'] ?? '')) ?></span></td>
+                    <td style="font-size:12px"><?= e($vis['nome'] ?? '—') ?></td>
                     <td>
                         <?php
                         echo match($ck['status'] ?? '') {
@@ -92,13 +90,12 @@ require ONECHECK_ROOT . '/includes/header.php';
                         ?>
                     </td>
                     <td style="font-size:12px"><?= e(substr($ck['data_vistoria'] ?? 'Não realizada', 0, 10)) ?></td>
-                    <td style="font-size:12px;color:#6b7fa3"><?= e(substr($ck['created_at'] ?? '', 0, 10)) ?></td>
                     <td class="text-end">
-                        <a href="<?= e(base_url('vistorias/checklist.php?id=' . $ck['id'] . '&contrato_id=' . $ck['_contrato_id'])) ?>" class="btn btn-outline-primary btn-sm">
+                        <a href="<?= e(base_url('vistorias/checklist.php?id=' . $ck['id'] . '&contrato_id=' . ($ck['_contrato_id'] ?? ''))) ?>" class="btn btn-outline-primary btn-sm">
                             <i class="bi bi-eye me-1"></i>Ver
                         </a>
-                        <?php if (($ck['status'] ?? '') === 'pendente_aceite' && in_array(api_role(), ['admin', 'gestor', 'locatario'], true)): ?>
-                        <a href="<?= e(base_url('vistorias/checklist.php?id=' . $ck['id'] . '&contrato_id=' . $ck['_contrato_id'])) ?>" class="btn btn-success btn-sm">
+                        <?php if (($ck['status'] ?? '') === 'pendente_aceite' && api_can_accept_vistoria()): ?>
+                        <a href="<?= e(base_url('vistorias/checklist.php?id=' . $ck['id'] . '&contrato_id=' . ($ck['_contrato_id'] ?? ''))) ?>" class="btn btn-success btn-sm">
                             <i class="bi bi-check-lg me-1"></i>Aceitar
                         </a>
                         <?php endif; ?>

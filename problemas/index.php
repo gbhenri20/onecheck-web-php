@@ -4,22 +4,30 @@ require_once dirname(__DIR__) . '/includes/bootstrap.php';
 require_once dirname(__DIR__) . '/config/api.php';
 require_once dirname(__DIR__) . '/includes/auth_api.php';
 require_once dirname(__DIR__) . '/includes/rbac.php';
+require_once dirname(__DIR__) . '/includes/scope.php';
 api_require_page('problemas');
 
-// Problemas vêm vinculados a contratos — buscar todos contratos e listar problemas
-// API: GET /contratos/{id}/problemas
-// Por ora listamos os contratos e buscamos problemas de cada um
-$resContratos = ApiClient::get('/contratos', ['por_pagina' => 100]);
-$contratos    = $resContratos['dados'] ?? [];
+$lookups   = api_fetch_lookups();
+$contratos = api_load_scoped_contratos()['dados'] ?? [];
+$byId      = [];
+foreach ($contratos as $ct) {
+    $byId[$ct['id']] = $ct;
+}
 
 $problemas = [];
-foreach ($contratos as $ct) {
-    $resP = ApiClient::get('/contratos/' . $ct['id'] . '/problemas');
-    foreach (($resP['dados'] ?? []) as $p) {
-        $p['_contrato_id'] = $ct['id'];
-        $problemas[] = $p;
+if ($contratos) {
+    $requests = [];
+    foreach ($contratos as $ct) {
+        $requests[$ct['id']] = '/contratos/' . $ct['id'] . '/problemas';
+    }
+    foreach (ApiClient::multi_get($requests) as $contratoId => $resP) {
+        foreach (($resP['dados'] ?? []) as $p) {
+            $p['_contrato_id'] = $contratoId;
+            $problemas[] = $p;
+        }
     }
 }
+usort($problemas, fn($a, $b) => ($b['created_at'] ?? '') <=> ($a['created_at'] ?? ''));
 
 $pageTitle  = 'Problemas';
 $activeMenu = 'problemas';
@@ -49,22 +57,29 @@ require ONECHECK_ROOT . '/includes/header.php';
             <thead>
                 <tr>
                     <th>Título</th>
+                    <th>Descrição</th>
+                    <th>Imóvel</th>
                     <th>Prioridade</th>
                     <th>Status</th>
                     <th>Registrado em</th>
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($problemas as $pr): ?>
+                <?php foreach ($problemas as $pr):
+                    $ct = $byId[$pr['_contrato_id'] ?? ''] ?? null;
+                    $im = $ct ? ($lookups['imoveis'][$ct['imovel_id'] ?? ''] ?? null) : null;
+                ?>
                 <tr>
-                    <td><?= e($pr['titulo'] ?? '—') ?></td>
+                    <td class="fw-semibold"><?= e($pr['titulo'] ?? '—') ?></td>
+                    <td style="font-size:12px;max-width:200px"><?= e(api_excerpt($pr['descricao'] ?? null)) ?></td>
+                    <td style="font-size:12px"><?= e(api_imovel_label($im)) ?></td>
                     <td><span class="badge bg-secondary"><?= e($pr['prioridade'] ?? 'normal') ?></span></td>
                     <td>
                         <?php
                         echo match($pr['status'] ?? '') {
                             'aberto'       => '<span class="badge bg-danger">Aberto</span>',
-                            'em_andamento' => '<span class="badge bg-warning">Em andamento</span>',
-                            'resolvido'    => '<span class="badge bg-success">Resolvido</span>',
+                            'em_andamento', 'em_analise' => '<span class="badge bg-warning text-dark">Em andamento</span>',
+                            'resolvido', 'fechado' => '<span class="badge bg-success">Resolvido</span>',
                             default        => '<span class="badge bg-secondary">' . e($pr['status'] ?? '') . '</span>',
                         };
                         ?>

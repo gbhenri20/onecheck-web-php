@@ -3,14 +3,12 @@
 declare(strict_types=1);
 
 /**
- * Configuração geral da aplicação.
- * base_path: caminho web até a pasta onecheck (ajuste se necessário).
- * Ex.: '/onecheck' para http://localhost/onecheck/
+ * base_path: prefixo da URL (vazio = raiz do domínio, ex. Render).
+ * Local XAMPP em subpasta: defina ONECHECK_BASE_PATH=/onecheck no Apache ou .htaccess.
  */
 return [
-    // Local XAMPP: /onecheck | Render (raiz): deixe vazio via ONECHECK_BASE_PATH=
     'base_path' => getenv('ONECHECK_BASE_PATH') !== false
-        ? getenv('ONECHECK_BASE_PATH')
-        : '/onecheck',
+        ? (string) getenv('ONECHECK_BASE_PATH')
+        : '',
     'name'      => 'OneCheck',
 ];

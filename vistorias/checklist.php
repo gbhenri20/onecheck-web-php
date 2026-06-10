@@ -6,6 +6,7 @@ require_once dirname(__DIR__) . '/includes/bootstrap.php';
 require_once dirname(__DIR__) . '/config/api.php';
 require_once dirname(__DIR__) . '/includes/auth_api.php';
 require_once dirname(__DIR__) . '/includes/rbac.php';
+require_once dirname(__DIR__) . '/includes/scope.php';
 api_require_page('vistorias');
 
 $id = get_str('id');
@@ -18,12 +19,16 @@ if ($id === '') {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $acao = post_str('acao');
-    if ($acao === 'aceitar') {
-        $resAc = ApiClient::patch('/checklists/' . urlencode($id) . '/aceitar', []);
-        flash_set(!empty($resAc['sucesso']) ? 'success' : 'error', $resAc['sucesso'] ? 'Vistoria aceita com sucesso.' : ($resAc['erro'] ?? 'Erro ao aceitar.'));
-    } elseif ($acao === 'rejeitar') {
-        $resAc = ApiClient::patch('/checklists/' . urlencode($id) . '/rejeitar', []);
-        flash_set(!empty($resAc['sucesso']) ? 'success' : 'error', $resAc['sucesso'] ? 'Vistoria rejeitada.' : ($resAc['erro'] ?? 'Erro ao rejeitar.'));
+    if (api_can_accept_vistoria()) {
+        if ($acao === 'aceitar') {
+            $resAc = ApiClient::patch('/checklists/' . urlencode($id) . '/aceitar', []);
+            flash_set(!empty($resAc['sucesso']) ? 'success' : 'error', $resAc['sucesso'] ? 'Vistoria aceita com sucesso.' : ($resAc['erro'] ?? 'Erro ao aceitar.'));
+        } elseif ($acao === 'rejeitar') {
+            $resAc = ApiClient::patch('/checklists/' . urlencode($id) . '/rejeitar', []);
+            flash_set(!empty($resAc['sucesso']) ? 'success' : 'error', $resAc['sucesso'] ? 'Vistoria rejeitada.' : ($resAc['erro'] ?? 'Erro ao rejeitar.'));
+        }
+    } else {
+        flash_set('error', 'Você não tem permissão para aceitar ou rejeitar vistorias.');
     }
     redirect(base_url('vistorias/checklist.php?id=' . urlencode($id) . '&contrato_id=' . urlencode($contratoId)));
 }
@@ -104,12 +109,12 @@ page_header(
     <span class="badge bg-secondary">ID: <?= e(substr($id, 0, 8)) ?>…</span>
 </div>
 
-<?php if (($checklist['status'] ?? '') === 'pendente_aceite' && in_array(api_role(), ['admin', 'gestor', 'locatario'], true)): ?>
+<?php if (($checklist['status'] ?? '') === 'pendente_aceite' && api_can_accept_vistoria()): ?>
 <div class="card mb-4 border-info">
     <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3">
         <div>
-            <strong><i class="bi bi-hand-index me-1"></i>Vistoria aguardando seu aceite</strong>
-            <p class="mb-0 small text-muted">Revise os itens abaixo e confirme ou rejeite a vistoria enviada pelo vistoriador.</p>
+            <strong><i class="bi bi-hand-index me-1"></i>Vistoria aguardando aceite</strong>
+            <p class="mb-0 small text-muted">Revise os itens abaixo e confirme ou rejeite a vistoria.</p>
         </div>
         <div class="d-flex gap-2">
             <form method="post" class="d-inline">

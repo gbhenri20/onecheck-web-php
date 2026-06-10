@@ -4,21 +4,21 @@ require_once dirname(__DIR__) . '/includes/bootstrap.php';
 require_once dirname(__DIR__) . '/config/api.php';
 require_once dirname(__DIR__) . '/includes/auth_api.php';
 require_once dirname(__DIR__) . '/includes/rbac.php';
+require_once dirname(__DIR__) . '/includes/scope.php';
 api_require_page('imoveis');
 
 flash_render();
 
 $statusF = $_GET['status'] ?? '';
-$busca   = trim($_GET['q'] ?? '');
 $pagina  = max(1, (int)($_GET['pagina'] ?? 1));
 
-$params = ['pagina' => $pagina, 'por_pagina' => 20];
+$params = ['pagina' => $pagina, 'por_pagina' => 20, 'com_endereco' => 1];
 if ($statusF !== '') $params['status'] = $statusF;
 
 $res      = ApiClient::get('/imoveis', $params);
 $imoveis  = $res['dados'] ?? [];
-$total    = $res['paginacao']['total'] ?? 0;
-$totalPag = (int) ceil($total / 20);
+$total    = $res['paginacao']['total'] ?? count($imoveis);
+$totalPag = max(1, (int) ceil($total / 20));
 
 $pageTitle  = 'Imóveis';
 $activeMenu = 'imoveis';
@@ -42,7 +42,6 @@ require ONECHECK_ROOT . '/includes/header.php';
     </div>
 </div>
 
-<!-- Filtros -->
 <div class="card mb-3">
     <div class="card-body py-3">
         <form class="row g-2 align-items-end" method="get">
@@ -79,38 +78,41 @@ require ONECHECK_ROOT . '/includes/header.php';
         <table class="table table-hover mb-0">
             <thead>
                 <tr>
-                    <th>ID</th>
+                    <th>Código / Título</th>
+                    <th>Descrição</th>
+                    <th>Endereço</th>
                     <th>Tipo</th>
-                    <th>Tamanho</th>
-                    <th>Garagem</th>
                     <th>Status</th>
-                    <th>Cadastrado em</th>
-                    <th>Ações</th>
+                    <th class="text-end">Ações</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($imoveis as $im): ?>
                 <tr>
-                    <td style="font-family:monospace;font-weight:500"><?= e(substr((string)($im['id'] ?? ''), -5)) ?></td>
+                    <td>
+                        <div class="fw-semibold"><?= e($im['codigo'] ?? '—') ?></div>
+                        <div class="small text-muted"><?= e($im['titulo'] ?? '—') ?></div>
+                    </td>
+                    <td style="font-size:12px;max-width:220px"><?= e(api_excerpt($im['observacoes'] ?? null)) ?></td>
+                    <td style="font-size:12px"><?= e(api_endereco_label($im['endereco'] ?? null)) ?></td>
                     <td><?= e($im['tipo'] ?? '—') ?></td>
-                    <td><?= e($im['tamanho'] ?? '—') ?></td>
-                    <td><?= ($im['garagem'] ?? false) ? ($im['garagem_vagas'] ?? 1) . ' vaga(s)' : 'Não' ?></td>
                     <td>
                         <?php
                         echo match($im['status'] ?? '') {
                             'locado'      => '<span class="badge bg-success">Locado</span>',
                             'disponivel'  => '<span class="badge bg-primary">Disponível</span>',
-                            'em_vistoria' => '<span class="badge bg-warning">Em vistoria</span>',
+                            'em_vistoria' => '<span class="badge bg-warning text-dark">Em vistoria</span>',
                             default       => '<span class="badge bg-secondary">' . e($im['status'] ?? '') . '</span>',
                         };
                         ?>
                     </td>
-                    <td style="font-size:12px;color:#6b7fa3"><?= e(substr($im['created_at'] ?? '', 0, 10)) ?></td>
                     <td class="text-end">
+                        <?php if (api_can_create('imoveis')): ?>
                         <a href="<?= e(base_url('imoveis/editar.php?id=' . $im['id'])) ?>"
                            class="btn btn-outline-secondary btn-sm">
                             <i class="bi bi-pencil"></i> Editar
                         </a>
+                        <?php endif; ?>
                     </td>
                 </tr>
                 <?php endforeach; ?>

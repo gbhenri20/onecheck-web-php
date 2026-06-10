@@ -88,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </button>
         </form>
         <p style="font-size:11px;color:#4a5568;text-align:center;margin-top:20px;margin-bottom:0">
-            Admin e vistoriador: MFA obrigatório após o primeiro acesso.
+            Se você configurou MFA no perfil, informe o código do autenticador após a senha.
         </p>
     </div>
 </div>

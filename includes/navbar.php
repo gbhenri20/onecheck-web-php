@@ -5,7 +5,7 @@
                     data-bs-toggle="offcanvas" data-bs-target="#sidebarMobile">
                 <i class="bi bi-list"></i>
             </button>
-            <a class="navbar-brand" href="<?= e(base_url('dashboard/index.php')) ?>"
+            <a class="navbar-brand" href="<?= e(api_home_url()) ?>"
                style="font-weight:700;letter-spacing:-.3px;font-size:16px">
                 <span class="brand-one">One</span><span class="brand-check">Check</span>
             </a>

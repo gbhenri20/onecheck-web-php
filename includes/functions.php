@@ -38,25 +38,25 @@ function app_web_root(): string
         return $root;
     }
 
-    $cfg = ONECHECK_ROOT . '/config/app.php';
-    if (is_file($cfg)) {
-        $app = require $cfg;
-        if (!empty($app['base_path'])) {
-            $root = rtrim(str_replace('\\', '/', (string) $app['base_path']), '/');
-            return $root;
-        }
+    // Variável de ambiente (Render/Docker) tem prioridade
+    $envBase = getenv('ONECHECK_BASE_PATH');
+    if ($envBase !== false) {
+        $root = rtrim(str_replace('\\', '/', (string) $envBase), '/');
+        return $root;
     }
 
-    $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
+    $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '/index.php');
 
-    // Sobe até a raiz do projeto, independente da pasta atual (dashboard, imoveis, etc.)
-    $modulos = ['dashboard', 'imoveis', 'vistorias', 'contratos', 'problemas', 'usuarios', 'public', 'api'];
+    $modulos = [
+        'dashboard', 'imoveis', 'vistorias', 'contratos', 'problemas',
+        'usuarios', 'locatario', 'public', 'api',
+    ];
     foreach ($modulos as $modulo) {
         $marcador = '/' . $modulo . '/';
         $pos = strpos($script, $marcador);
         if ($pos !== false) {
             $root = substr($script, 0, $pos);
-            return $root === '' ? '' : $root;
+            return $root === '/' ? '' : $root;
         }
         if (str_ends_with($script, '/' . $modulo)) {
             $root = dirname($script);
@@ -65,8 +65,23 @@ function app_web_root(): string
     }
 
     $dir = dirname($script);
-    $root = str_ends_with($dir, '/public') ? dirname($dir) : $dir;
-    return $root === '/' ? '' : $root;
+    if (str_ends_with($dir, '/public')) {
+        $root = dirname($dir);
+        return $root === '/' ? '' : $root;
+    }
+
+    $cfg = ONECHECK_ROOT . '/config/app.php';
+    if (is_file($cfg)) {
+        $app = require $cfg;
+        $configured = rtrim(str_replace('\\', '/', (string) ($app['base_path'] ?? '')), '/');
+        if ($configured !== '') {
+            $root = $configured;
+            return $root;
+        }
+    }
+
+    $root = '';
+    return $root;
 }
 
 function base_url(string $path = ''): string

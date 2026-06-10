@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once dirname(__DIR__) . '/includes/bootstrap.php';
 require_once dirname(__DIR__) . '/config/api.php';
+require_once dirname(__DIR__) . '/includes/api_jwt.php';
 
 // Já logado
 if (!empty($_SESSION['api_token'])) {
@@ -12,6 +13,63 @@ if (!empty($_SESSION['api_token'])) {
 $logoutMsg = isset($_GET['logout']);
 $erro = '';
 
+/**
+ * @return never
+ */
+function login_complete(array $res): void
+{
+    $_SESSION['api_token']         = $res['dados']['access_token'];
+    $_SESSION['api_refresh_token'] = $res['dados']['refresh_token'] ?? null;
+    $_SESSION['user']              = $res['dados']['usuario'];
+    require_once ONECHECK_ROOT . '/includes/rbac.php';
+    redirect(api_home_url());
+}
+
+/**
+ * @return never
+ */
+function login_redirect_mfa(string $tempToken): void
+{
+    $_SESSION['mfa_temp_token'] = $tempToken;
+    redirect(base_url('public/mfa-verify.php'));
+}
+
+/**
+ * Detecta MFA ativo consultando /usuarios/me (funciona mesmo com API de login desatualizada).
+ */
+function login_check_mfa_ativo(string $accessToken): array
+{
+    $_SESSION['api_token'] = $accessToken;
+    $me = ApiClient::get('/usuarios/me');
+    unset($_SESSION['api_token'], $_SESSION['api_refresh_token']);
+
+    if (empty($me['sucesso']) || empty($me['dados'])) {
+        return ['ativo' => false, 'user_id' => ''];
+    }
+
+    $d = $me['dados'];
+    $ativo = !empty($d['mfa_ativo'])
+        || (!empty($d['mfa_configurado']) && !empty($d['mfa_enabled']));
+
+    return ['ativo' => $ativo, 'user_id' => (string) ($d['id'] ?? '')];
+}
+
+/**
+ * @return never
+ */
+function login_force_mfa(string $userId): void
+{
+    if ($userId === '') {
+        throw new RuntimeException('Usuário sem ID para MFA.');
+    }
+    if (!api_jwt_configured()) {
+        throw new RuntimeException(
+            'Configure ONECHECK_JWT_SECRET no servidor web com o mesmo valor de JWT_SECRET da API (Render → onecheck-api → Environment).'
+        );
+    }
+    login_redirect_mfa(api_issue_mfa_temp_token($userId));
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
     $senha = $_POST['senha'] ?? '';
@@ -20,21 +78,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $erro = 'Informe e-mail e senha.';
     } else {
         $res = ApiClient::post('/auth/login', ['email' => $email, 'senha' => $senha]);
+        $dados = $res['dados'] ?? [];
+        $tempToken = (string) ($dados['temp_token'] ?? $dados['mfa_token'] ?? '');
 
-        if (!empty($res['sucesso']) && !empty($res['dados']['access_token'])) {
-            $_SESSION['api_token']         = $res['dados']['access_token'];
-            $_SESSION['api_refresh_token'] = $res['dados']['refresh_token'];
-            $_SESSION['user']              = $res['dados']['usuario'];
-            require_once dirname(__DIR__) . '/includes/rbac.php';
-            redirect(api_home_url());
+        try {
+            if (!empty($res['sucesso']) && !empty($dados['mfa_required']) && $tempToken !== '') {
+                login_redirect_mfa($tempToken);
 
-        } elseif (!empty($res['dados']['mfa_required'])) {
-            // MFA necessário
-            $_SESSION['mfa_temp_token'] = $res['dados']['temp_token'];
-            redirect(base_url('public/mfa-verify.php'));
+            } elseif (!empty($res['sucesso']) && !empty($dados['access_token'])) {
+                $userId = (string) ($dados['usuario']['id'] ?? '');
+                $mfa = login_check_mfa_ativo($dados['access_token']);
+                if ($mfa['user_id'] !== '') {
+                    $userId = $mfa['user_id'];
+                }
 
-        } else {
-            $erro = $res['erro'] ?? 'Credenciais inválidas.';
+                if ($mfa['ativo']) {
+                    login_force_mfa($userId);
+                }
+
+                login_complete($res);
+
+            } else {
+                $erro = $res['erro'] ?? 'Credenciais inválidas.';
+            }
+        } catch (RuntimeException $e) {
+            $erro = $e->getMessage();
         }
     }
 }
@@ -88,7 +156,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </button>
         </form>
         <p style="font-size:11px;color:#4a5568;text-align:center;margin-top:20px;margin-bottom:0">
-            Se você configurou MFA no perfil, informe o código do autenticador após a senha.
+            Contas com MFA: após a senha, informe o código do autenticador.
         </p>
     </div>
 </div>

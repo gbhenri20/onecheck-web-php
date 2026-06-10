@@ -40,6 +40,11 @@ services:
         value: https://onecheck-api.onrender.com/api/v1
       - key: ONECHECK_BASE_PATH
         value: ""
+      - key: ONECHECK_JWT_SECRET
+        fromService:
+          type: web
+          name: onecheck-api
+          envVarKey: JWT_SECRET
 
 databases:
   - name: onecheck-db

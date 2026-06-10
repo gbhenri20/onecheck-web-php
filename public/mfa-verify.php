@@ -26,7 +26,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         require_once dirname(__DIR__) . '/includes/rbac.php';
         redirect(api_home_url());
     } else {
-        $erro = 'Código inválido. Tente novamente.';
+        $erro = $res['erro'] ?? 'Código inválido. Tente novamente.';
+        if (str_contains(strtolower($erro), 'token mfa')) {
+            $erro .= ' Verifique se ONECHECK_JWT_SECRET no web é igual ao JWT_SECRET da API.';
+        }
     }
 }
 ?>

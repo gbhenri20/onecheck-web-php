@@ -17,7 +17,7 @@ COPY . /var/www/html/
 RUN chown -R www-data:www-data /var/www/html
 
 ENV ONECHECK_BASE_PATH=
-ENV ONECHECK_API_URL=https://onecheck-api.onrender.com/api/v1
+ENV ONECHECK_API_URL=https://isg022-one-check-api-python.onrender.com/api/v1
 
 EXPOSE 80
 CMD ["/bin/bash", "/usr/local/bin/start-web.sh"]

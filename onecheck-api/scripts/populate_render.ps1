@@ -2,7 +2,7 @@
 # Uso: .\scripts\populate_render.ps1
 # Requer SEED_SECRET configurado no Render (Environment)
 
-$ApiUrl = "https://onecheck-api.onrender.com/api/v1/admin/seed"
+$ApiUrl = "https://isg022-one-check-api-python.onrender.com/api/v1/admin/seed"
 $Secret = $env:SEED_SECRET
 if (-not $Secret) { $Secret = "onecheck-seed-dev" }
 

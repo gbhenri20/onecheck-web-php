@@ -7,7 +7,7 @@
  *   ONECHECK_API_URL=http://localhost:8000/api/v1
  */
 
-$_apiUrl = getenv('ONECHECK_API_URL') ?: 'https://onecheck-api.onrender.com/api/v1';
+$_apiUrl = getenv('ONECHECK_API_URL') ?: 'https://isg022-one-check-api-python.onrender.com/api/v1';
 $_apiUrl = rtrim($_apiUrl, '/');
 if (!str_ends_with($_apiUrl, '/api/v1')) {
     $_apiUrl .= '/api/v1';

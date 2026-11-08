@@ -10,7 +10,7 @@ try:
 except ImportError:
     pyotp = None
 
-BASE = sys.argv[1] if len(sys.argv) > 1 else "https://isg022-one-check-api-python.onrender.com//api/v1"
+BASE = sys.argv[1] if len(sys.argv) > 1 else "https://isg022-one-check-api-python.onrender.com/api/v1"
 MFA_SECRET = "JBSWY3DPEHPK3PXP"
 SEED_SECRET = sys.argv[2] if len(sys.argv) > 2 else "onecheck-seed-dev"
 

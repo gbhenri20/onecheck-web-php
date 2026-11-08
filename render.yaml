@@ -37,7 +37,7 @@ services:
     healthCheckPath: /public/login.php
     envVars:
       - key: ONECHECK_API_URL
-        value: https://onecheck-api.onrender.com/api/v1
+        value: https://isg022-one-check-api-python.onrender.com/api/v1
       - key: ONECHECK_BASE_PATH
         value: ""
       - key: ONECHECK_JWT_SECRET
